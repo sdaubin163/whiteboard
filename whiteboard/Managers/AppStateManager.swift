@@ -147,17 +147,41 @@ class AppStateManager: ObservableObject {
         
         // 显示并激活主窗口
         if let window = NSApp.windows.first {
-            // 确保窗口可见
-            window.makeKeyAndOrderFront(nil)
+            // 分步骤强制激活应用和窗口
             
-            // 将窗口移到所有应用程序的前面
-            window.orderFrontRegardless()
-            
-            // 激活应用程序
+            // 第一步：立即激活应用
             NSApp.activate(ignoringOtherApps: true)
             
-            // 确保窗口成为关键窗口（获得焦点）
+            // 第二步：显示窗口并置顶
+            window.makeKeyAndOrderFront(nil)
+            window.orderFrontRegardless()
+            
+            // 第三步：设置窗口级别为浮动窗口，确保置顶
+            window.level = .floating
+            
+            // 第四步：强制成为关键窗口
+            window.makeMain()
             window.makeKey()
+            
+            // 第五步：多次激活确保生效
+            DispatchQueue.main.async {
+                NSApp.activate(ignoringOtherApps: true)
+                window.makeKey()
+                
+                // 短暂延迟后恢复正常窗口级别并再次激活
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    window.level = .normal
+                    NSApp.activate(ignoringOtherApps: true)
+                    window.makeKey()
+                    
+                    // 最后一次确保激活
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        NSApp.activate(ignoringOtherApps: true)
+                        window.makeKey()
+                        print("✅ 最终激活完成")
+                    }
+                }
+            }
             
             print("窗口已显示并激活")
         } else {
@@ -176,14 +200,21 @@ class AppStateManager: ObservableObject {
     private func activateApplication() {
         // 激活应用但不显示窗口（窗口已经可见）
         if let window = NSApp.windows.first {
+            // 首先激活应用程序
+            NSApp.activate(ignoringOtherApps: true)
+            
             // 将窗口移到所有应用程序的前面
             window.orderFrontRegardless()
             
-            // 激活应用程序
-            NSApp.activate(ignoringOtherApps: true)
-            
             // 确保窗口成为关键窗口（获得焦点）
             window.makeKey()
+            
+            // 额外的激活步骤，确保应用获得焦点
+            DispatchQueue.main.async {
+                NSApp.activate(ignoringOtherApps: true)
+                window.makeMain()
+                window.makeKey()
+            }
             
             print("应用已激活")
         } else {

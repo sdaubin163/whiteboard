@@ -429,6 +429,27 @@ struct NotesContainer: View {
                         
                         Spacer()
                         
+                        // 变更状态指示器
+                        if containerState.hasUnsavedChanges {
+                            HStack(spacing: 4) {
+                                Circle()
+                                    .fill(Color.orange)
+                                    .frame(width: 6, height: 6)
+                                Text("未保存")
+                                    .font(.caption)
+                                    .foregroundColor(.orange)
+                            }
+                        } else {
+                            HStack(spacing: 4) {
+                                Circle()
+                                    .fill(Color.green)
+                                    .frame(width: 6, height: 6)
+                                Text("已保存")
+                                    .font(.caption)
+                                    .foregroundColor(.green)
+                            }
+                        }
+                        
                         Button("删除") {
                             deleteCurrentNote()
                         }

@@ -70,6 +70,33 @@ struct SettingsView: View {
                                     .foregroundColor(ModernTheme.accentBlue)
                                     .cornerRadius(4)
                             }
+                            
+                            Divider()
+                            
+                            // 自动保存间隔设置
+                            SettingsRow(
+                                title: "自动保存间隔",
+                                subtitle: "\(formatInterval(config.autoSaveInterval)) - 内容变更时自动保存",
+                                icon: "timer"
+                            ) {
+                                VStack(spacing: 8) {
+                                    Slider(
+                                        value: Binding(
+                                            get: { config.autoSaveInterval },
+                                            set: { config.updateAutoSaveInterval($0) }
+                                        ),
+                                        in: 5...300,
+                                        step: 5
+                                    ) {
+                                        Text("自动保存间隔")
+                                    }
+                                    .frame(width: 120)
+                                    
+                                    Text("\(formatInterval(config.autoSaveInterval))")
+                                        .font(.caption)
+                                        .foregroundColor(ModernTheme.secondaryText)
+                                }
+                            }
                         }
                     }
                     
@@ -243,6 +270,22 @@ struct SettingsView: View {
         config.updateNotesSaveLocation(defaultNotesLocation)
         
         updateStats()
+    }
+    
+    // 格式化时间间隔显示
+    private func formatInterval(_ interval: TimeInterval) -> String {
+        let seconds = Int(interval)
+        if seconds < 60 {
+            return "\(seconds)秒"
+        } else {
+            let minutes = seconds / 60
+            let remainingSeconds = seconds % 60
+            if remainingSeconds == 0 {
+                return "\(minutes)分钟"
+            } else {
+                return "\(minutes)分\(remainingSeconds)秒"
+            }
+        }
     }
 }
 

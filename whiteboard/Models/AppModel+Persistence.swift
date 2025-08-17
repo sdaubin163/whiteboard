@@ -73,10 +73,10 @@ extension AppModel {
         }
         
         // 加载笔记数据
-        let loadedNotes = NotePersistenceManager.shared.loadNotes(for: notesApp.id)
-        containers[notesApp.id]?.notes = loadedNotes
+        containers[notesApp.id]?.loadNotesIfNeeded()
         
-        print("📖 应用启动时预加载了 \(loadedNotes.count) 条笔记")
+        let notesCount = containers[notesApp.id]?.notes.count ?? 0
+        print("📖 应用启动时预加载了 \(notesCount) 条笔记")
     }
     
     // 为特定容器加载笔记
@@ -133,14 +133,17 @@ extension AppContainerState {
             notes = loadedNotes
             print("📖 容器 \(appId) 已加载 \(loadedNotes.count) 条笔记")
         }
+        // 加载完成后更新哈希值，标记为无变更状态
+        notesDidLoad()
     }
     
-    // 添加笔记（不自动保存）
+    // 添加笔记（标记变更）
     func addNote(_ note: Note) {
         notes.append(note)
+        markAsChanged()
     }
     
-    // 更新笔记（不自动保存）
+    // 更新笔记（标记变更）
     func updateNote(at index: Int, title: String? = nil, content: String? = nil) {
         guard index < notes.count else { return }
         
@@ -151,22 +154,20 @@ extension AppContainerState {
             notes[index].content = content
         }
         notes[index].modifiedAt = Date()
+        markAsChanged()
     }
     
-    // 删除笔记（不自动保存）
+    // 删除笔记（标记变更）
     func removeNote(at index: Int) {
         guard index < notes.count else { return }
         notes.remove(at: index)
+        markAsChanged()
     }
     
-    // 删除指定笔记（不自动保存）
+    // 删除指定笔记（标记变更）
     func removeNote(withId id: UUID) {
         notes.removeAll { $0.id == id }
+        markAsChanged()
     }
     
-    // 手动保存笔记
-    func manualSaveNotes() {
-        guard contentType == .notes else { return }
-        NotePersistenceManager.shared.saveNotes(for: self.appId, notes: self.notes)
-    }
 }

@@ -15,7 +15,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, Observable
         setupWindowCloseHandling()
         
         // 稍后初始化管理器，确保窗口已创建
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
             self.initializeManagers()
         }
     }
@@ -26,6 +26,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, Observable
         
         // 强制显示窗口
         self.showMainWindow()
+        
+        // 发送初始化完成通知
+        NotificationCenter.default.post(name: .appStateManagerReady, object: appStateManager)
         
         print("应用启动完成，全局快捷键 Option+Esc 已激活")
     }

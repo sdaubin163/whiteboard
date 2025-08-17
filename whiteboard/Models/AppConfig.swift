@@ -7,6 +7,7 @@ class AppConfig: ObservableObject {
     
     @Published var notesSaveLocation: URL
     @Published var notesAppId: UUID? // 笔记应用的UUID
+    @Published var autoSaveInterval: TimeInterval = 30 // 自动保存间隔（秒），默认30秒
     
     private let configFileName = "AppConfig.json"
     private var configFileURL: URL {
@@ -28,10 +29,10 @@ class AppConfig: ObservableObject {
     private struct ConfigData: Codable {
         let notesSaveLocation: String
         let notesAppId: String? // 笔记应用的UUID字符串
+        let autoSaveInterval: TimeInterval // 自动保存间隔（秒）
         
         // 为了向后兼容，保留旧字段但设为可选
         let autoSaveEnabled: Bool?
-        let autoSaveInterval: TimeInterval?
     }
     
     // 加载配置
@@ -47,6 +48,9 @@ class AppConfig: ObservableObject {
                 self.notesAppId = UUID(uuidString: notesAppIdString)
             }
             
+            // 加载自动保存间隔
+            self.autoSaveInterval = config.autoSaveInterval
+            
             print("✅ 配置加载成功: \(configFileURL.path)")
         } catch {
             print("📝 使用默认配置，将创建新配置文件: \(error.localizedDescription)")
@@ -60,8 +64,8 @@ class AppConfig: ObservableObject {
             let config = ConfigData(
                 notesSaveLocation: notesSaveLocation.path,
                 notesAppId: notesAppId?.uuidString,
-                autoSaveEnabled: nil, // 不再使用自动保存
-                autoSaveInterval: nil  // 不再使用自动保存
+                autoSaveInterval: autoSaveInterval,
+                autoSaveEnabled: nil // 为了向后兼容保留
             )
             
             let data = try JSONEncoder().encode(config)
@@ -103,6 +107,16 @@ class AppConfig: ObservableObject {
         print("📝 笔记应用ID已更新: \(appId.uuidString)")
     }
     
+    // 更新自动保存间隔
+    func updateAutoSaveInterval(_ interval: TimeInterval) {
+        autoSaveInterval = max(5, min(300, interval)) // 限制在5秒到300秒之间
+        saveConfig()
+        print("📝 自动保存间隔已更新: \(autoSaveInterval)秒")
+        
+        // 发送通知以更新现有的容器计时器
+        NotificationCenter.default.post(name: .autoSaveIntervalChanged, object: autoSaveInterval)
+    }
+    
     // 恢复安全范围访问权限
     private func restoreSecurityScopedAccess() {
         guard let bookmarkData = UserDefaults.standard.data(forKey: "NotesFolderBookmark") else {
@@ -135,4 +149,10 @@ class AppConfig: ObservableObject {
             print("❌ 恢复文件夹访问权限失败: \(error.localizedDescription)")
         }
     }
+}
+
+// 通知名称扩展
+extension Notification.Name {
+    static let autoSaveIntervalChanged = Notification.Name("autoSaveIntervalChanged")
+    static let appStateManagerReady = Notification.Name("appStateManagerReady")
 }
