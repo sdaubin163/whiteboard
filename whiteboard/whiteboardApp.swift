@@ -9,13 +9,42 @@ import SwiftUI
 
 @main
 struct whiteboardApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .background(.clear)
+                .onAppear {
+                    // 配置窗口属性
+                    configureWindow()
+                }
         }
-        .windowStyle(.hiddenTitleBar)
+        .windowStyle(.automatic)
         .windowResizability(.contentSize)
         .windowToolbarStyle(.unifiedCompact(showsTitle: false))
+        .defaultSize(width: 1000, height: 700)
+        .commands {
+            // 移除默认的"关闭"菜单项，添加自定义行为
+            CommandGroup(replacing: .newItem) {}
+        }
+    }
+    
+    func configureWindow() {
+        DispatchQueue.main.async {
+            if let window = NSApp.windows.first {
+                print("配置窗口...")
+                window.title = "智能工作台"
+                window.center()
+                
+                // 设置最小尺寸
+                window.minSize = NSSize(width: 800, height: 600)
+                
+                // 设置窗口代理来处理关闭事件
+                window.delegate = appDelegate
+                print("✅ 窗口代理已设置，关闭操作将隐藏到菜单栏")
+            } else {
+                print("ContentView.onAppear: 未找到窗口")
+            }
+        }
     }
 }

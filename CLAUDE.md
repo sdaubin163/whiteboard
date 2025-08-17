@@ -8,16 +8,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## 架构结构
 - **主应用**: `whiteboard/` - 包含主要的 SwiftUI 代码
   - `whiteboardApp.swift` - 应用程序入口点，定义了主要的 App 结构
-  - `ContentView.swift` - 主视图组件，现代科技感的智能工作台界面
-  - `SidebarButton.swift` - 侧边栏按钮组件，支持悬停和选中状态
-  - `WebView.swift` - Web 视图组件，用于嵌入网页应用
-  - `AppModel.swift` - 应用数据模型，管理 Web 应用列表
-  - `ModernTheme.swift` - 现代科技感主题配色方案
-  - `ModernBackground.swift` - 动态背景和玻璃态效果组件
-  - `Assets.xcassets/` - 应用资源文件（图标、颜色等）
-  - `Resources/` - 资源管理目录
+  - **UI/** - 用户界面模块
+    - **Views/** - 视图组件
+      - `ContentView.swift` - 主视图组件，现代科技感的智能工作台界面
+      - `Views.swift` - 视图模块索引文件
+    - **Components/** - 可复用UI组件
+      - `SidebarButton.swift` - 侧边栏按钮组件，支持悬停和选中状态
+      - `WebView.swift` - Web 视图组件，用于嵌入网页应用
+      - `Components.swift` - 组件模块索引文件
+    - **Styles/** - 样式和主题
+      - `ModernTheme.swift` - 现代科技感主题配色方案
+      - `ModernBackground.swift` - 动态背景和玻璃态效果组件
+      - `Styles.swift` - 样式模块索引文件
+  - **Models/** - 数据模型
+    - `AppModel.swift` - 应用数据模型，管理 Web 应用列表
+    - `Models.swift` - 数据模型模块索引文件
+  - **Managers/** - 管理器模块
+    - `AppStateManager.swift` - 应用状态管理器，控制窗口显示/隐藏
+    - `GlobalHotKeyManager.swift` - 全局快捷键管理器
+    - `MenuBarManager.swift` - 菜单栏管理器
+    - `Managers.swift` - 管理器模块索引文件
+  - **Resources/** - 资源管理目录
     - `Icons/icon.icns` - 应用图标文件
     - `ResourceManager.swift` - 资源管理工具类
+  - `AppDelegate.swift` - 应用程序委托，管理应用生命周期
+  - `Assets.xcassets/` - 应用资源文件（图标、颜色等）
   - `whiteboard.entitlements` - 应用权限配置（包含网络访问权限）
 - **测试结构**:
   - `whiteboardTests/` - 单元测试，使用 Swift Testing 框架
@@ -52,8 +67,48 @@ xcodebuild test -project whiteboard.xcodeproj -scheme whiteboard -destination 'p
 - **开发环境**: Xcode
 - **目标平台**: macOS（可能支持 iOS，取决于项目配置）
 
+## 代码组织原则
+
+### 模块化设计
+项目采用模块化的代码组织结构：
+- **UI/Views/**: 主要视图组件，包含完整的页面级视图
+- **UI/Components/**: 可复用的UI组件，遵循单一职责原则
+- **UI/Styles/**: 样式和主题管理，统一视觉风格
+- **Models/**: 数据模型和业务逻辑
+- **Resources/**: 静态资源管理
+
+### 样式管理
+- `ModernTheme.swift`: 定义应用的配色方案、渐变和视觉样式
+- `ModernBackground.swift`: 提供动态背景效果和玻璃态UI组件
+- 所有样式相关的代码集中在 `UI/Styles/` 目录下
+
+### 组件设计
+- 每个组件都是独立的、可复用的
+- 支持主题切换和动画效果
+- 遵循 SwiftUI 的最佳实践
+
+## 核心功能
+
+### 全局快捷键
+- **快捷键**: `Option + Esc`
+- **功能**: 全局切换应用显示/隐藏状态
+- **实现**: 使用 Carbon 框架注册系统级快捷键
+
+### 菜单栏模式
+- **隐藏行为**: 应用隐藏时从程序坞移除，只在菜单栏显示图标
+- **菜单功能**: 显示/隐藏窗口、偏好设置、关于、退出
+- **点击行为**: 点击菜单栏图标可切换窗口显示状态
+
+### 侧边栏切换
+- **工具栏按钮**: 标题栏左侧的侧边栏切换按钮
+- **功能**: 显示/隐藏左侧应用选择区域
+- **动画**: 平滑的滑动和透明度过渡效果
+
 ## 开发注意事项
 - 项目使用现代 Swift Testing 框架进行单元测试
 - UI 测试使用传统的 XCTest 框架
-- 当前应用处于初始阶段，主要包含基础的 SwiftUI 视图结构
+- 应用具有现代简洁的设计风格，类似 Xcode 的界面
+- 支持系统的浅色/深色模式自动切换
 - 遵循标准的 Xcode 项目结构和 SwiftUI 最佳实践
+- 代码按功能模块组织，便于维护和扩展
+- 使用 AppDelegate 管理应用生命周期和系统集成
