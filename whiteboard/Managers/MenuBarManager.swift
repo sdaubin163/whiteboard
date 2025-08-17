@@ -70,8 +70,36 @@ class MenuBarManager: ObservableObject {
     }
     
     @objc private func openPreferences() {
-        // 打开偏好设置窗口（暂时显示关于对话框）
-        NSApp.orderFrontStandardAboutPanel(self)
+        // 确保窗口可见
+        showWindow()
+        
+        // 发送打开设置的通知
+        NotificationCenter.default.post(name: .openSettings, object: nil)
+    }
+    
+    private func showWindow() {
+        // 恢复到程序坞
+        NSApp.setActivationPolicy(.regular)
+        
+        // 显示并激活主窗口
+        if let window = NSApp.windows.first {
+            // 确保窗口可见
+            window.makeKeyAndOrderFront(nil)
+            
+            // 将窗口移到所有应用程序的前面
+            window.orderFrontRegardless()
+            
+            // 激活应用程序
+            NSApp.activate(ignoringOtherApps: true)
+            
+            // 确保窗口成为关键窗口（获得焦点）
+            window.makeKey()
+            
+            print("设置窗口已显示并激活")
+        } else {
+            // 如果没有窗口，激活应用
+            NSApp.activate(ignoringOtherApps: true)
+        }
     }
     
     @objc private func showAbout() {

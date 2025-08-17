@@ -34,6 +34,9 @@ class AppStateManager: ObservableObject {
         hotKeyManager?.toggleCallback = { [weak self] in
             self?.toggleWindowVisibility()
         }
+        hotKeyManager?.toggleWithResetCallback = { [weak self] in
+            self?.toggleWindowVisibilityWithReset()
+        }
         
         // 初始化菜单栏管理器
         menuBarManager = MenuBarManager(appDelegate: appDelegate)
@@ -49,15 +52,73 @@ class AppStateManager: ObservableObject {
             return
         }
         
-        print("🔄 切换窗口可见性 - 当前状态: \(isWindowVisible ? "可见" : "隐藏")")
+        let isAppActive = NSApp.isActive
+        print("🔄 切换窗口可见性 - 当前状态: \(isWindowVisible ? "可见" : "隐藏"), 应用激活状态: \(isAppActive ? "激活" : "未激活")")
         
         DispatchQueue.main.async {
             if self.isWindowVisible {
-                print("➡️ 执行隐藏操作")
-                self.hideWindow()
+                // 窗口可见时，检查应用是否激活
+                if isAppActive {
+                    // 应用激活状态下，执行隐藏操作
+                    print("➡️ 应用已激活，执行隐藏操作")
+                    self.hideWindow()
+                } else {
+                    // 应用未激活状态下，激活应用
+                    print("➡️ 应用未激活，激活应用")
+                    self.activateApplication()
+                }
             } else {
                 print("➡️ 执行显示操作")
                 self.showWindow()
+            }
+        }
+    }
+    
+    func toggleWindowVisibilityWithReset() {
+        // 防止在初始化期间意外切换
+        guard isInitialized else {
+            print("⚠️ AppStateManager 尚未完全初始化，忽略切换请求")
+            return
+        }
+        
+        let isAppActive = NSApp.isActive
+        print("🔄 切换窗口可见性并重置 - 当前状态: \(isWindowVisible ? "可见" : "隐藏"), 应用激活状态: \(isAppActive ? "激活" : "未激活")")
+        
+        DispatchQueue.main.async {
+            if self.isWindowVisible {
+                // 窗口可见时，检查应用是否激活
+                if isAppActive {
+                    // 应用激活状态下，先重置到空白页再隐藏
+                    print("📄 重置到空白页面")
+                    NotificationCenter.default.post(name: .resetToBlankPage, object: nil)
+                    
+                    // 稍微延迟后隐藏窗口，确保重置操作完成
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        print("➡️ 执行隐藏操作")
+                        self.hideWindow()
+                    }
+                } else {
+                    // 应用未激活状态下，激活应用并重置到空白页
+                    print("➡️ 应用未激活，激活应用并重置到空白页")
+                    self.activateApplication()
+                    
+                    // 激活后重置到空白页
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        print("📄 重置到空白页面")
+                        NotificationCenter.default.post(name: .resetToBlankPage, object: nil)
+                    }
+                }
+            } else {
+                // 如果窗口当前隐藏，先显示窗口，然后重置到空白页
+                print("➡️ 执行显示操作")
+                self.showWindow()
+                
+                // 显示窗口后立即重置到空白页
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    print("📄 AppStateManager: 准备发送重置通知")
+                    NotificationCenter.default.post(name: .resetToBlankPage, object: nil)
+                    print("📄 AppStateManager: 重置通知已发送")
+                }
             }
         }
     }
@@ -110,6 +171,24 @@ class AppStateManager: ObservableObject {
         menuBarManager?.updateMenuItemTitle(isWindowVisible: true)
         
         print("应用已从菜单栏恢复")
+    }
+    
+    private func activateApplication() {
+        // 激活应用但不显示窗口（窗口已经可见）
+        if let window = NSApp.windows.first {
+            // 将窗口移到所有应用程序的前面
+            window.orderFrontRegardless()
+            
+            // 激活应用程序
+            NSApp.activate(ignoringOtherApps: true)
+            
+            // 确保窗口成为关键窗口（获得焦点）
+            window.makeKey()
+            
+            print("应用已激活")
+        } else {
+            print("未找到窗口进行激活")
+        }
     }
     
     // 处理窗口关闭事件

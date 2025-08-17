@@ -10,6 +10,7 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var appModel = AppModel()
     @State private var isSidebarVisible = true
+    @State private var showingSettings = false
     
     var body: some View {
         GeometryReader { geometry in
@@ -20,14 +21,14 @@ struct ContentView: View {
                         // 侧边栏内容
                         VStack(spacing: 8) {
                             // 应用按钮
-                            ForEach(appModel.webApps) { app in
+                            ForEach(appModel.apps) { app in
                                 SidebarButton(
                                     icon: app.icon,
                                     isSystemIcon: app.isSystemIcon,
                                     isSelected: appModel.selectedApp?.id == app.id
                                 ) {
-                                    withAnimation(.easeInOut(duration: 0.2)) {
-                                        appModel.selectedApp = app
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                        appModel.selectAppWithPersistence(app)
                                     }
                                 }
                             }
@@ -49,15 +50,23 @@ struct ContentView: View {
                         .transition(.opacity)
                 }
                 
-                // 右侧主内容区域
-                VStack(spacing: 0) {
-                    // WebView 或占位内容
-                    if let selectedApp = appModel.selectedApp,
-                       let url = URL(string: selectedApp.url) {
-                        WebView(url: url)
-                    } else {
+                // 右侧主内容区域 - 只创建已被访问的容器
+                ZStack {
+                    // 只为已创建的容器创建视图（懒加载）
+                    ForEach(Array(appModel.containers.keys), id: \.self) { appId in
+                        if let app = appModel.apps.first(where: { $0.id == appId }),
+                           let containerState = appModel.getContainerState(for: appId) {
+                            AppContainerView(app: app, containerState: containerState)
+                                .opacity(appModel.selectedApp?.id == app.id ? 1 : 0)
+                                .allowsHitTesting(appModel.selectedApp?.id == app.id)
+                                .animation(.easeInOut(duration: 0.3), value: appModel.selectedApp?.id)
+                        }
+                    }
+                    
+                    // 占位内容（当没有选中应用时显示）
+                    if appModel.selectedApp == nil {
                         VStack(spacing: 32) {
-                            Image(systemName: "globe")
+                            Image(systemName: "square.stack.3d.up")
                                 .font(.system(size: 64, weight: .ultraLight))
                                 .foregroundColor(ModernTheme.secondaryText)
                             
@@ -67,13 +76,14 @@ struct ContentView: View {
                                     .fontWeight(.medium)
                                     .foregroundColor(ModernTheme.primaryText)
                                 
-                                Text("从左侧选择一个应用来浏览网页")
+                                Text("从左侧选择应用访问网页、编辑文档或使用工具")
                                     .font(.body)
                                     .foregroundColor(ModernTheme.secondaryText)
                             }
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .background(ModernTheme.contentBackground)
+                        .transition(.opacity)
                     }
                 }
                 .background(ContentPanel())
@@ -86,6 +96,34 @@ struct ContentView: View {
                 SidebarToggleButton(isSidebarVisible: $isSidebarVisible)
             }
         }
+        .sheet(isPresented: $showingSettings) {
+            SettingsView()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .resetToBlankPage)) { _ in
+            print("📄 ContentView: 收到重置通知，重置到空白页面")
+            DispatchQueue.main.async {
+                appModel.resetToBlankPage()
+            }
+        }
+        .onAppear {
+            setupApp()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openSettings)) { _ in
+            showingSettings = true
+        }
+    }
+    
+    private func setupApp() {
+        print("🚀 初始化应用...")
+        appModel.setupNotePersistence()
+        
+        // 调试：打印当前保存路径
+        NotePersistenceManager.shared.debugPrintSavePath()
+        
+        // 预加载笔记数据
+        appModel.preloadNotesData()
+        
+        print("✅ 应用初始化完成")
     }
 }
 

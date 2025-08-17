@@ -26,6 +26,22 @@ struct whiteboardApp: App {
         .commands {
             // 移除默认的"关闭"菜单项，添加自定义行为
             CommandGroup(replacing: .newItem) {}
+            
+            // 添加设置菜单
+            CommandGroup(after: .appInfo) {
+                Button("设置...") {
+                    NotificationCenter.default.post(name: .openSettings, object: nil)
+                }
+                .keyboardShortcut(",", modifiers: .command)
+            }
+            
+            // 添加文件菜单命令
+            CommandGroup(after: .newItem) {
+                Button("保存笔记") {
+                    NotificationCenter.default.post(name: .manualSaveNotes, object: nil)
+                }
+                .keyboardShortcut("s", modifiers: .command)
+            }
         }
     }
     
