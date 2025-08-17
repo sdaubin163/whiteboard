@@ -6,32 +6,19 @@ class NotePersistenceManager: ObservableObject {
     static let shared = NotePersistenceManager()
     
     private let config = AppConfig.shared
-    private var autoSaveTimer: Timer?
     
     private init() {
-        setupAutoSave()
+        // 移除自动保存初始化
     }
     
-    deinit {
-        autoSaveTimer?.invalidate()
+    // 设置方法（保留空实现以向后兼容）
+    func setup() {
+        print("📚 笔记持久化管理器已初始化（仅手动保存模式）")
     }
     
-    // 设置自动保存
-    private func setupAutoSave() {
-        autoSaveTimer?.invalidate()
-        
-        guard config.autoSaveEnabled else { return }
-        
-        autoSaveTimer = Timer.scheduledTimer(withTimeInterval: config.autoSaveInterval, repeats: true) { _ in
-            self.saveAllNotes()
-        }
-        
-        print("⏰ 自动保存已启用，间隔: \(config.autoSaveInterval)秒")
-    }
-    
-    // 重新配置自动保存
+    // 向后兼容方法（空实现）
     func reconfigureAutoSave() {
-        setupAutoSave()
+        // 不再使用自动保存，保留空方法避免编译错误
     }
     
     // 获取笔记文件URL

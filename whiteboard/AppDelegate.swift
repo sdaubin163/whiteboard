@@ -3,7 +3,7 @@ import AppKit
 import SwiftUI
 
 class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, ObservableObject {
-    private var appStateManager: AppStateManager?
+    var appStateManager: AppStateManager?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         print("应用启动中...")

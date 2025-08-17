@@ -123,7 +123,7 @@ class AppStateManager: ObservableObject {
         }
     }
     
-    private func hideWindow() {
+    func hideWindow() {
         // 隐藏所有窗口
         NSApp.windows.forEach { window in
             window.orderOut(nil)

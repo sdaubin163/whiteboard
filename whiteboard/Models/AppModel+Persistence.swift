@@ -23,9 +23,17 @@ extension AppModel {
             containerState.isVisible = true
             containers[app.id] = containerState
             
-            // 如果是笔记容器，加载已保存的笔记
-            if app.contentType == .notes {
+            // 根据内容类型进行特殊初始化
+            switch app.contentType {
+            case .webView:
+                if let urlString = app.url, let url = URL(string: urlString) {
+                    containerState.webViewURL = url
+                    print("🌐 设置 WebView URL: \(url.absoluteString)")
+                }
+            case .notes:
                 loadNotesForContainer(app.id)
+            case .textEditor:
+                break
             }
         } else {
             print("♻️ 复用已存在的容器: \(app.name)")
@@ -127,14 +135,13 @@ extension AppContainerState {
         }
     }
     
-    // 添加笔记后自动保存
-    func addNoteAndSave(_ note: Note) {
+    // 添加笔记（不自动保存）
+    func addNote(_ note: Note) {
         notes.append(note)
-        autoSaveNotes()
     }
     
-    // 更新笔记后自动保存
-    func updateNoteAndSave(at index: Int, title: String? = nil, content: String? = nil) {
+    // 更新笔记（不自动保存）
+    func updateNote(at index: Int, title: String? = nil, content: String? = nil) {
         guard index < notes.count else { return }
         
         if let title = title {
@@ -144,30 +151,22 @@ extension AppContainerState {
             notes[index].content = content
         }
         notes[index].modifiedAt = Date()
-        
-        autoSaveNotes()
     }
     
-    // 删除笔记后自动保存
-    func removeNoteAndSave(at index: Int) {
+    // 删除笔记（不自动保存）
+    func removeNote(at index: Int) {
         guard index < notes.count else { return }
         notes.remove(at: index)
-        autoSaveNotes()
     }
     
-    // 删除指定笔记后自动保存
-    func removeNoteAndSave(withId noteId: UUID) {
-        notes.removeAll { $0.id == noteId }
-        autoSaveNotes()
+    // 删除指定笔记（不自动保存）
+    func removeNote(withId id: UUID) {
+        notes.removeAll { $0.id == id }
     }
     
-    // 自动保存笔记
-    private func autoSaveNotes() {
+    // 手动保存笔记
+    func manualSaveNotes() {
         guard contentType == .notes else { return }
-        
-        // 延迟保存，避免频繁写入
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            NotePersistenceManager.shared.saveNotes(for: self.appId, notes: self.notes)
-        }
+        NotePersistenceManager.shared.saveNotes(for: self.appId, notes: self.notes)
     }
 }

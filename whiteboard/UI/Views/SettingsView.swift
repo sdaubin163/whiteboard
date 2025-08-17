@@ -56,43 +56,19 @@ struct SettingsView: View {
                             
                             Divider()
                             
-                            // 自动保存
+                            // 手动保存说明
                             SettingsRow(
-                                title: "自动保存",
-                                subtitle: "保护您的笔记内容",
-                                icon: "square.and.arrow.down"
+                                title: "保存方式",
+                                subtitle: "使用 Cmd+S 手动保存笔记",
+                                icon: "keyboard"
                             ) {
-                                Toggle("", isOn: $config.autoSaveEnabled)
-                                    .onChange(of: config.autoSaveEnabled) { enabled in
-                                        config.updateAutoSaveSettings(
-                                            enabled: enabled,
-                                            interval: config.autoSaveInterval
-                                        )
-                                        persistenceManager.reconfigureAutoSave()
-                                    }
-                            }
-                            
-                            if config.autoSaveEnabled {
-                                Divider()
-                                
-                                SettingsRow(
-                                    title: "自动保存间隔",
-                                    subtitle: "\(Int(config.autoSaveInterval)) 秒",
-                                    icon: "timer"
-                                ) {
-                                    Stepper(
-                                        "",
-                                        value: $config.autoSaveInterval,
-                                        in: 1...60,
-                                        step: 1
-                                    ) { _ in
-                                        config.updateAutoSaveSettings(
-                                            enabled: config.autoSaveEnabled,
-                                            interval: config.autoSaveInterval
-                                        )
-                                        persistenceManager.reconfigureAutoSave()
-                                    }
-                                }
+                                Text("手动保存")
+                                    .font(.caption)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(ModernTheme.accentBlue.opacity(0.1))
+                                    .foregroundColor(ModernTheme.accentBlue)
+                                    .cornerRadius(4)
                             }
                         }
                     }
@@ -265,8 +241,6 @@ struct SettingsView: View {
         let defaultNotesLocation = documentsPath.appendingPathComponent("WhiteboardApp").appendingPathComponent("Notes")
         
         config.updateNotesSaveLocation(defaultNotesLocation)
-        config.updateAutoSaveSettings(enabled: true, interval: 5.0)
-        persistenceManager.reconfigureAutoSave()
         
         updateStats()
     }

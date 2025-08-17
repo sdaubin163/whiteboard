@@ -6,8 +6,6 @@ class AppConfig: ObservableObject {
     static let shared = AppConfig()
     
     @Published var notesSaveLocation: URL
-    @Published var autoSaveEnabled = true
-    @Published var autoSaveInterval: TimeInterval = 5.0 // 5秒自动保存
     @Published var notesAppId: UUID? // 笔记应用的UUID
     
     private let configFileName = "AppConfig.json"
@@ -29,9 +27,11 @@ class AppConfig: ObservableObject {
     // 配置数据结构
     private struct ConfigData: Codable {
         let notesSaveLocation: String
-        let autoSaveEnabled: Bool
-        let autoSaveInterval: TimeInterval
         let notesAppId: String? // 笔记应用的UUID字符串
+        
+        // 为了向后兼容，保留旧字段但设为可选
+        let autoSaveEnabled: Bool?
+        let autoSaveInterval: TimeInterval?
     }
     
     // 加载配置
@@ -41,8 +41,6 @@ class AppConfig: ObservableObject {
             let config = try JSONDecoder().decode(ConfigData.self, from: data)
             
             self.notesSaveLocation = URL(fileURLWithPath: config.notesSaveLocation)
-            self.autoSaveEnabled = config.autoSaveEnabled
-            self.autoSaveInterval = config.autoSaveInterval
             
             // 加载笔记应用ID
             if let notesAppIdString = config.notesAppId {
@@ -61,9 +59,9 @@ class AppConfig: ObservableObject {
         do {
             let config = ConfigData(
                 notesSaveLocation: notesSaveLocation.path,
-                autoSaveEnabled: autoSaveEnabled,
-                autoSaveInterval: autoSaveInterval,
-                notesAppId: notesAppId?.uuidString
+                notesAppId: notesAppId?.uuidString,
+                autoSaveEnabled: nil, // 不再使用自动保存
+                autoSaveInterval: nil  // 不再使用自动保存
             )
             
             let data = try JSONEncoder().encode(config)
@@ -97,13 +95,6 @@ class AppConfig: ObservableObject {
         saveConfig()
     }
     
-    // 更新自动保存设置
-    func updateAutoSaveSettings(enabled: Bool, interval: TimeInterval) {
-        autoSaveEnabled = enabled
-        autoSaveInterval = interval
-        saveConfig()
-        print("⚙️ 自动保存设置已更新: 启用=\(enabled), 间隔=\(interval)秒")
-    }
     
     // 更新笔记应用ID
     func updateNotesAppId(_ appId: UUID) {

@@ -511,22 +511,25 @@ struct NotesContainer: View {
     
     private func updateNoteTitle() {
         if let index = containerState.notes.firstIndex(where: { $0.id == selectedNote?.id }) {
-            containerState.updateNoteAndSave(at: index, title: editingNoteTitle)
+            containerState.updateNote(at: index, title: editingNoteTitle)
         }
     }
     
     private func updateNoteContent() {
         if let index = containerState.notes.firstIndex(where: { $0.id == selectedNote?.id }) {
-            containerState.updateNoteAndSave(at: index, content: editingNoteContent)
+            containerState.updateNote(at: index, content: editingNoteContent)
         }
     }
     
     private func deleteCurrentNote() {
         if let note = selectedNote {
-            containerState.removeNoteAndSave(withId: note.id)
+            containerState.removeNote(withId: note.id)
             selectedNote = nil
             editingNoteTitle = ""
             editingNoteContent = ""
+            
+            // 删除后手动保存
+            containerState.manualSaveNotes()
         }
     }
     
@@ -536,19 +539,21 @@ struct NotesContainer: View {
             updateNoteTitle()
             updateNoteContent()
             
-            // 强制立即保存到磁盘
-            let appId = containerState.appId
-            NotePersistenceManager.shared.saveNotes(for: appId, notes: containerState.notes)
+            // 手动保存到磁盘
+            containerState.manualSaveNotes()
             
-            // 显示保存提示（可选）
+            // 显示保存提示
             print("✅ 笔记已保存")
         }
     }
     
     private func addNewNote(title: String, content: String) {
         let newNote = Note(title: title, content: content)
-        containerState.addNoteAndSave(newNote)
+        containerState.addNote(newNote)
         selectNote(newNote)
+        
+        // 添加新笔记后手动保存
+        containerState.manualSaveNotes()
     }
 }
 

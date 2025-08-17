@@ -51,6 +51,7 @@ class AppContainerState: ObservableObject {
         self.appId = appId
         self.contentType = contentType
     }
+    
 }
 
 // 应用模型
@@ -87,10 +88,40 @@ class AppModel: ObservableObject {
         ]
     }
     
-    // 获取容器状态
+    // 获取或创建容器状态（懒加载）
     func getContainerState(for appId: UUID) -> AppContainerState? {
-        return containers[appId]
+        if let existingState = containers[appId] {
+            return existingState
+        }
+        
+        // 找到对应的应用
+        guard let app = apps.first(where: { $0.id == appId }) else {
+            print("❌ 未找到应用 ID: \(appId)")
+            return nil
+        }
+        
+        // 创建新的容器状态
+        let containerState = AppContainerState(appId: appId, contentType: app.contentType)
+        containers[appId] = containerState
+        
+        print("🆕 为应用 '\(app.name)' 创建新容器状态")
+        
+        // 根据内容类型进行特殊初始化
+        switch app.contentType {
+        case .webView:
+            if let urlString = app.url, let url = URL(string: urlString) {
+                containerState.webViewURL = url
+            }
+        case .notes:
+            // 加载笔记数据
+            loadNotesForContainer(appId)
+        case .textEditor:
+            break
+        }
+        
+        return containerState
     }
+    
     
     // 重置到空白页面
     func resetToBlankPage() {
