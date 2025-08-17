@@ -9,6 +9,7 @@ struct SettingsView: View {
     @State private var showingFolderPicker = false
     @State private var showingResetAlert = false
     @State private var notesStats = (totalFiles: 0, totalNotes: 0, totalSize: "0 KB")
+    @State private var refreshView = false // 用于强制刷新界面
     
     var body: some View {
         VStack(spacing: 0) {
@@ -30,6 +31,30 @@ struct SettingsView: View {
             
             ScrollView {
                 VStack(spacing: 24) {
+                    // 外观设置
+                    SettingsSection(title: "外观设置", icon: "paintpalette") {
+                        VStack(spacing: 16) {
+                            // 主题模式选择
+                            SettingsRow(
+                                title: "主题模式",
+                                subtitle: "选择应用的外观主题",
+                                icon: "circle.lefthalf.filled"
+                            ) {
+                                Picker("主题模式", selection: Binding(
+                                    get: { config.themeMode },
+                                    set: { config.updateThemeMode($0) }
+                                )) {
+                                    ForEach(ModernTheme.ThemeMode.allCases, id: \.rawValue) { mode in
+                                        Text(mode.rawValue)
+                                            .tag(mode.rawValue)
+                                    }
+                                }
+                                .pickerStyle(.segmented)
+                                .frame(width: 180)
+                            }
+                        }
+                    }
+                    
                     // 笔记设置
                     SettingsSection(title: "笔记设置", icon: "note.text") {
                         VStack(spacing: 16) {
@@ -185,7 +210,18 @@ struct SettingsView: View {
         }
         .onAppear {
             updateStats()
+            
+            // 监听主题变更通知
+            NotificationCenter.default.addObserver(
+                forName: .themeChanged,
+                object: nil,
+                queue: .main
+            ) { _ in
+                // 强制刷新界面以应用新主题
+                refreshView.toggle()
+            }
         }
+        .id(refreshView) // 当 refreshView 变化时强制重建视图
     }
     
     private func handleFolderSelection(_ result: Result<[URL], Error>) {

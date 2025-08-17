@@ -295,7 +295,9 @@ struct TextEditorContainer: View {
             // 编辑器
             TextEditor(text: $containerState.textContent)
                 .font(.system(.body, design: .monospaced))
+                .foregroundColor(ModernTheme.primaryText)
                 .padding()
+                .scrollContentBackground(.hidden)
                 .background(ModernTheme.contentBackground)
                 .onAppear {
                     // 设置文本编辑器的外观
@@ -403,8 +405,11 @@ struct NotesContainer: View {
                     .buttonStyle(PlainButtonStyle()) // 避免默认按钮样式
                     .background(selectedNote?.id == note.id ? ModernTheme.selectedBackground : Color.clear)
                     .cornerRadius(8)
+                    .listRowBackground(ModernTheme.sidebarBackground) // 设置列表行背景
                 }
                 .listStyle(PlainListStyle())
+                .scrollContentBackground(.hidden) // 隐藏默认背景
+                .background(ModernTheme.sidebarBackground) // 设置列表背景
                 .padding(.horizontal, 8)
             }
             .frame(width: 280) // 稍微增加宽度以容纳新的布局
@@ -423,6 +428,7 @@ struct NotesContainer: View {
                         TextField("笔记标题", text: $editingNoteTitle)
                             .textFieldStyle(.plain)
                             .font(.headline)
+                            .foregroundColor(ModernTheme.primaryText)
                             .onSubmit {
                                 updateNoteTitle()
                             }
@@ -466,6 +472,7 @@ struct NotesContainer: View {
                     
                     TextEditor(text: $editingNoteContent)
                         .font(.body)
+                        .foregroundColor(ModernTheme.primaryText)
                         .padding()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .scrollContentBackground(.hidden)

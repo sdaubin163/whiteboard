@@ -8,6 +8,7 @@ class AppConfig: ObservableObject {
     @Published var notesSaveLocation: URL
     @Published var notesAppId: UUID? // 笔记应用的UUID
     @Published var autoSaveInterval: TimeInterval = 30 // 自动保存间隔（秒），默认30秒
+    @Published var themeMode: String = "深色" // 主题模式，默认深色
     
     private let configFileName = "AppConfig.json"
     private var configFileURL: URL {
@@ -23,6 +24,7 @@ class AppConfig: ObservableObject {
         loadConfig()
         createDirectoriesIfNeeded()
         restoreSecurityScopedAccess()
+        initializeTheme()
     }
     
     // 配置数据结构
@@ -30,6 +32,7 @@ class AppConfig: ObservableObject {
         let notesSaveLocation: String
         let notesAppId: String? // 笔记应用的UUID字符串
         let autoSaveInterval: TimeInterval // 自动保存间隔（秒）
+        let themeMode: String? // 主题模式（可选，向后兼容）
         
         // 为了向后兼容，保留旧字段但设为可选
         let autoSaveEnabled: Bool?
@@ -51,6 +54,9 @@ class AppConfig: ObservableObject {
             // 加载自动保存间隔
             self.autoSaveInterval = config.autoSaveInterval
             
+            // 加载主题模式（向后兼容）
+            self.themeMode = config.themeMode ?? "深色"
+            
             print("✅ 配置加载成功: \(configFileURL.path)")
         } catch {
             print("📝 使用默认配置，将创建新配置文件: \(error.localizedDescription)")
@@ -65,6 +71,7 @@ class AppConfig: ObservableObject {
                 notesSaveLocation: notesSaveLocation.path,
                 notesAppId: notesAppId?.uuidString,
                 autoSaveInterval: autoSaveInterval,
+                themeMode: themeMode,
                 autoSaveEnabled: nil // 为了向后兼容保留
             )
             
@@ -117,6 +124,18 @@ class AppConfig: ObservableObject {
         NotificationCenter.default.post(name: .autoSaveIntervalChanged, object: autoSaveInterval)
     }
     
+    // 更新主题模式
+    func updateThemeMode(_ mode: String) {
+        themeMode = mode
+        saveConfig()
+        print("🎨 主题模式已更新: \(mode)")
+        
+        // 更新 ModernTheme 的当前模式
+        if let themeMode = ModernTheme.ThemeMode(rawValue: mode) {
+            ModernTheme.updateTheme(to: themeMode)
+        }
+    }
+    
     // 恢复安全范围访问权限
     private func restoreSecurityScopedAccess() {
         guard let bookmarkData = UserDefaults.standard.data(forKey: "NotesFolderBookmark") else {
@@ -149,10 +168,24 @@ class AppConfig: ObservableObject {
             print("❌ 恢复文件夹访问权限失败: \(error.localizedDescription)")
         }
     }
+    
+    // 初始化主题
+    private func initializeTheme() {
+        if let themeMode = ModernTheme.ThemeMode(rawValue: themeMode) {
+            ModernTheme.updateTheme(to: themeMode)
+            print("🎨 主题初始化完成: \(themeMode)")
+            
+            // 延迟发送主题变更通知，确保UI已经加载
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                NotificationCenter.default.post(name: .themeChanged, object: themeMode)
+            }
+        }
+    }
 }
 
 // 通知名称扩展
 extension Notification.Name {
     static let autoSaveIntervalChanged = Notification.Name("autoSaveIntervalChanged")
     static let appStateManagerReady = Notification.Name("appStateManagerReady")
+    static let themeChanged = Notification.Name("themeChanged")
 }

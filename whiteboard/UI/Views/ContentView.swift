@@ -13,6 +13,7 @@ struct ContentView: View {
     @State private var showingSettings = false
     @State private var keyMonitor: Any?
     @State private var appStateManagerRef: AppStateManager?
+    @State private var refreshView = false // 用于强制刷新界面
     
     var body: some View {
         GeometryReader { geometry in
@@ -56,6 +57,7 @@ struct ContentView: View {
             setupApp()
             setupEscKeyListener()
         }
+        .id(refreshView) // 当 refreshView 变化时强制重建视图
         .onDisappear {
             removeEscKeyListener()
         }
@@ -84,6 +86,17 @@ struct ContentView: View {
                 self.appStateManagerRef = appStateManager
                 print("✅ AppStateManager 初始化完成，已缓存引用")
             }
+        }
+        
+        // 监听主题变更通知
+        NotificationCenter.default.addObserver(
+            forName: .themeChanged,
+            object: nil,
+            queue: .main
+        ) { _ in
+            // 强制刷新界面以应用新主题
+            refreshView.toggle()
+            print("🎨 主题变更，刷新界面")
         }
         
         print("✅ 应用初始化完成")
