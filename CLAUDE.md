@@ -12,10 +12,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     - **Views/** - 视图组件
       - `ContentView.swift` - 主视图组件，现代科技感的智能工作台界面
       - `AppContainerView.swift` - 应用容器视图，支持WebView、文本编辑器和笔记
-      - `SettingsView.swift` - 设置界面，配置笔记保存位置和自动保存
+      - `SettingsView.swift` - 设置界面，配置笔记保存位置和手动保存说明
       - `Views.swift` - 视图模块索引文件
     - **Components/** - 可复用UI组件
       - `SidebarButton.swift` - 侧边栏按钮组件，支持悬停和选中状态
+      - `SidebarContainerView.swift` - 左侧按钮区容器，管理应用选择
+      - `ContentContainerView.swift` - 右侧内容区容器，支持视图实例隔离
       - `WebView.swift` - Web 视图组件，用于嵌入网页应用
       - `Components.swift` - 组件模块索引文件
     - **Styles/** - 样式和主题
@@ -24,7 +26,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
       - `Styles.swift` - 样式模块索引文件
   - **Models/** - 数据模型
     - `AppModel.swift` - 应用数据模型，管理应用列表和容器状态
-    - `AppConfig.swift` - 应用配置管理，处理笔记保存位置和自动保存设置
+    - `AppConfig.swift` - 应用配置管理，处理笔记保存位置和应用设置
     - `AppModel+Persistence.swift` - 应用模型持久化扩展
     - `Models.swift` - 数据模型模块索引文件
   - **Managers/** - 管理器模块
@@ -96,18 +98,20 @@ xcodebuild test -project whiteboard.xcodeproj -scheme whiteboard -destination 'p
 ## 核心功能
 
 ### 应用容器系统
+- **隔离架构**: 采用完全隔离的容器架构，解决视图状态污染问题
 - **懒加载架构**: 只有被访问的应用才会创建容器实例
 - **状态保持**: 每个容器维护独立的状态，切换时不丢失数据
+- **视图隔离**: 左侧按钮区（SidebarContainerView）和右侧内容区（ContentContainerView）完全分离
 - **容器类型**: 
-  - WebView容器（支持网页应用）
-  - 文本编辑器容器
-  - 笔记容器（支持多笔记管理）
+  - IsolatedWebViewContainer（隔离的WebView容器）
+  - IsolatedTextEditorContainer（隔离的文本编辑器容器）
+  - IsolatedNotesContainer（隔离的笔记容器）
 
 ### 笔记管理系统
-- **持久化存储**: 笔记自动保存为JSON格式
+- **持久化存储**: 笔记保存为JSON格式
 - **自定义保存位置**: 用户可以选择笔记保存目录
-- **自动保存**: 可配置的自动保存间隔（1-60秒）
-- **手动保存**: 支持Cmd+S快捷键手动保存
+- **手动保存**: 仅支持Cmd+S快捷键手动保存（已移除自动保存功能）
+- **即时保存**: 新建和删除笔记时立即保存
 - **权限管理**: 使用安全范围访问和书签机制
 - **配置文件位置**: `~/Documents/WhiteboardApp/AppConfig.json`
 
@@ -120,7 +124,10 @@ xcodebuild test -project whiteboard.xcodeproj -scheme whiteboard -destination 'p
   - 应用隐藏 → 显示并重置到空白页
   - 应用显示且激活 → 重置后隐藏
   - 应用显示但未激活 → 激活并重置到空白页
-- **实现**: 使用 Carbon 框架注册系统级快捷键
+- **ESC**: 应用内快捷键，快速隐藏应用
+  - 仅在应用处于激活状态时生效
+  - 直接隐藏应用到菜单栏
+- **实现**: 全局快捷键使用 Carbon 框架，ESC 键使用 NSEvent 本地监听
 
 ### 菜单栏模式
 - **隐藏行为**: 应用隐藏时从程序坞移除，只在菜单栏显示图标
@@ -132,6 +139,38 @@ xcodebuild test -project whiteboard.xcodeproj -scheme whiteboard -destination 'p
 - **功能**: 显示/隐藏左侧应用选择区域
 - **动画**: 平滑的滑动和透明度过渡效果
 
+### 代理设置系统
+- **全局代理**: 支持为整个应用配置HTTP/HTTPS/SOCKS5代理
+- **代理类型**: HTTP、HTTPS、SOCKS5三种协议支持
+- **认证支持**: 可选的用户名密码认证
+- **配置管理**: 代理设置保存在AppConfig.json中
+- **实时应用**: 代理设置变更后立即生效
+- **连接测试**: 内置代理连接测试功能
+- **WebView集成**: WebView组件自动使用配置的代理设置
+- **网络请求**: 所有URLSession请求都将通过配置的代理
+
+## 架构改进
+
+### 容器隔离架构 (2024年8月更新)
+- **问题解决**: 解决了不同类型视图（WebView与文本编辑器）之间的光标样式污染问题
+- **隔离方案**: 采用左右分区设计，每个区域有独立的顶层容器控制
+- **实现方式**: 
+  - 左侧: `SidebarContainerView` 专门管理应用选择按钮
+  - 右侧: `ContentContainerView` 管理内容显示，每个应用类型有独立的隔离容器
+  - 每个容器使用唯一的 `.id()` 修饰符强制视图实例隔离
+- **技术特点**:
+  - 视图实例完全隔离，避免状态污染
+  - 支持延迟加载和状态同步
+  - 保持原有的懒加载性能优势
+
+### 手动保存架构
+- **设计理念**: 移除自动保存功能，避免频繁磁盘写入
+- **保存时机**:
+  - 手动保存: 用户按 Cmd+S 触发
+  - 即时保存: 新建笔记、删除笔记时自动保存
+  - 编辑保存: 仅在手动保存时写入磁盘
+- **用户体验**: 设置界面明确显示"使用 Cmd+S 手动保存笔记"
+
 ## 开发注意事项
 - 项目使用现代 Swift Testing 框架进行单元测试
 - UI 测试使用传统的 XCTest 框架
@@ -142,6 +181,13 @@ xcodebuild test -project whiteboard.xcodeproj -scheme whiteboard -destination 'p
 - 使用 AppDelegate 管理应用生命周期和系统集成
 - 使用沙盒安全机制，需要用户授权文件访问权限
 - 支持macOS设计规范（Cmd+,打开设置，无工具栏设置按钮）
+
+### 架构相关注意事项
+- **容器隔离**: 修改容器相关代码时，注意保持左右区域的完全隔离
+- **视图实例**: 每个隔离容器必须使用唯一的 `.id()` 修饰符
+- **状态管理**: 容器状态通过 `@State` 本地管理，确保状态变化能正确触发视图更新
+- **笔记保存**: 不再有自动保存功能，只支持手动保存（Cmd+S）和即时保存（新建/删除）
+- **方法命名**: 笔记相关方法已重命名（如 `addNote` 而非 `addNoteAndSave`）
 
 ## 构建和打包
 ### 本地开发打包
