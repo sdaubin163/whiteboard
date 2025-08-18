@@ -31,13 +31,17 @@ struct ContentContainerView: View {
     
     var body: some View {
         ZStack {
-            // 显示所有已缓存的容器，但只让选中的可见
+            // 显示所有已缓存的容器
             ForEach(Array(containerViewCache.keys), id: \.self) { appId in
                 if let cachedContainer = containerViewCache[appId] {
+                    let isActive = appModel.selectedApp?.id == appId
+                    
                     cachedContainer.view
-                        .opacity(appModel.selectedApp?.id == appId ? 1 : 0)
-                        .allowsHitTesting(appModel.selectedApp?.id == appId)
-                        .animation(.easeInOut(duration: 0.25), value: appModel.selectedApp?.id)
+                        // 将非活跃视图移到屏幕外而不改变其尺寸
+                        .offset(x: isActive ? 0 : -10000, y: isActive ? 0 : -10000)
+                        .opacity(isActive ? 1 : 0) // 保留透明度动画以实现平滑过渡
+                        .allowsHitTesting(isActive)
+                        .animation(.easeInOut(duration: 0.01), value: appModel.selectedApp?.id)
                 }
             }
             
@@ -49,7 +53,7 @@ struct ContentContainerView: View {
         }
         .background(ContentPanel())
         .clipped()
-        .onChange(of: appModel.selectedApp?.id) { newAppId in
+        .onChange(of: appModel.selectedApp?.id) { _, newAppId in
             if let selectedApp = appModel.selectedApp {
                 if containerViewCache[selectedApp.id] == nil {
                     // 只有在缓存中不存在时才创建新容器
