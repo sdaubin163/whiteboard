@@ -24,6 +24,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, Observable
         // 初始化应用状态管理器
         appStateManager = AppStateManager(appDelegate: self)
         
+        // 初始化代理管理器（通过AppConfig自动初始化）
+        _ = ProxyManager.shared
+        
         // 强制显示窗口
         self.showMainWindow()
         

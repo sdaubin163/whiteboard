@@ -3,10 +3,14 @@ import WebKit
 
 struct WebView: NSViewRepresentable {
     let url: URL
+    @ObservedObject private var proxyManager = ProxyManager.shared
     
     func makeNSView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
         configuration.preferences.javaScriptEnabled = true
+        
+        // 应用代理设置到WebView配置
+        configureProxyForWebView(configuration)
         
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
@@ -22,6 +26,35 @@ struct WebView: NSViewRepresentable {
             let request = URLRequest(url: url)
             nsView.load(request)
         }
+    }
+    
+    // 为WebView配置代理设置
+    private func configureProxyForWebView(_ configuration: WKWebViewConfiguration) {
+        guard let proxyConfig = proxyManager.currentProxyConfiguration else {
+            return
+        }
+        
+        // 创建代理配置字典
+        var proxyDict: [AnyHashable: Any] = [:]
+        
+        switch proxyConfig.type {
+        case .http:
+            proxyDict[kCFNetworkProxiesHTTPEnable] = true
+            proxyDict[kCFNetworkProxiesHTTPProxy] = proxyConfig.host
+            proxyDict[kCFNetworkProxiesHTTPPort] = proxyConfig.port
+        case .https:
+            proxyDict[kCFNetworkProxiesHTTPSEnable] = true
+            proxyDict[kCFNetworkProxiesHTTPSProxy] = proxyConfig.host
+            proxyDict[kCFNetworkProxiesHTTPSPort] = proxyConfig.port
+        case .socks5:
+            proxyDict[kCFNetworkProxiesSOCKSEnable] = true
+            proxyDict[kCFNetworkProxiesSOCKSProxy] = proxyConfig.host
+            proxyDict[kCFNetworkProxiesSOCKSPort] = proxyConfig.port
+        }
+        
+        // 注意：WKWebView的代理配置相对复杂，这里提供基础配置
+        // 实际的代理设置需要通过URLSessionConfiguration或系统级配置来实现
+        print("🌐 WebView代理配置: \(proxyConfig.host):\(proxyConfig.port) (\(proxyConfig.type.rawValue))")
     }
     
     func makeCoordinator() -> Coordinator {

@@ -11,6 +11,17 @@ struct SettingsView: View {
     @State private var notesStats = (totalFiles: 0, totalNotes: 0, totalSize: "0 KB")
     @State private var refreshView = false // 用于强制刷新界面
     
+    // 代理设置状态
+    @State private var proxyEnabled = false
+    @State private var proxyType = "HTTP"
+    @State private var proxyHost = ""
+    @State private var proxyPort = 8080
+    @State private var proxyUsername = ""
+    @State private var proxyPassword = ""
+    @State private var proxyAuthRequired = false
+    @State private var isTestingProxy = false
+    @State private var proxyTestResult = ""
+    
     var body: some View {
         VStack(spacing: 0) {
             // 标题栏
@@ -51,6 +62,140 @@ struct SettingsView: View {
                                 }
                                 .pickerStyle(.segmented)
                                 .frame(width: 180)
+                            }
+                        }
+                    }
+                    
+                    // 网络设置
+                    SettingsSection(title: "网络设置", icon: "network") {
+                        VStack(spacing: 16) {
+                            // 代理启用开关
+                            SettingsRow(
+                                title: "启用代理",
+                                subtitle: proxyEnabled ? "代理已启用" : "代理已禁用",
+                                icon: "globe"
+                            ) {
+                                Toggle("", isOn: $proxyEnabled)
+                                    .onChange(of: proxyEnabled) { _ in
+                                        saveProxySettings()
+                                    }
+                            }
+                            
+                            if proxyEnabled {
+                                Divider()
+                                
+                                // 代理类型选择
+                                SettingsRow(
+                                    title: "代理类型",
+                                    subtitle: proxyType,
+                                    icon: "arrow.triangle.swap"
+                                ) {
+                                    Picker("代理类型", selection: $proxyType) {
+                                        Text("HTTP").tag("HTTP")
+                                        Text("HTTPS").tag("HTTPS")
+                                        Text("SOCKS5").tag("SOCKS5")
+                                    }
+                                    .pickerStyle(.segmented)
+                                    .frame(width: 200)
+                                    .onChange(of: proxyType) { _ in
+                                        saveProxySettings()
+                                    }
+                                }
+                                
+                                Divider()
+                                
+                                // 代理服务器地址
+                                SettingsRow(
+                                    title: "服务器地址",
+                                    subtitle: proxyHost.isEmpty ? "请输入代理服务器地址" : proxyHost,
+                                    icon: "server.rack"
+                                ) {
+                                    TextField("例如: 127.0.0.1", text: $proxyHost)
+                                        .textFieldStyle(.roundedBorder)
+                                        .frame(width: 150)
+                                        .onChange(of: proxyHost) { _ in
+                                            saveProxySettings()
+                                        }
+                                }
+                                
+                                Divider()
+                                
+                                // 代理端口
+                                SettingsRow(
+                                    title: "端口",
+                                    subtitle: "\(proxyPort)",
+                                    icon: "number"
+                                ) {
+                                    TextField("端口", value: $proxyPort, format: .number)
+                                        .textFieldStyle(.roundedBorder)
+                                        .frame(width: 80)
+                                        .onChange(of: proxyPort) { _ in
+                                            saveProxySettings()
+                                        }
+                                }
+                                
+                                Divider()
+                                
+                                // 认证设置
+                                SettingsRow(
+                                    title: "需要认证",
+                                    subtitle: proxyAuthRequired ? "启用用户名密码认证" : "无需认证",
+                                    icon: "key"
+                                ) {
+                                    Toggle("", isOn: $proxyAuthRequired)
+                                        .onChange(of: proxyAuthRequired) { _ in
+                                            saveProxySettings()
+                                        }
+                                }
+                                
+                                if proxyAuthRequired {
+                                    Divider()
+                                    
+                                    // 用户名
+                                    SettingsRow(
+                                        title: "用户名",
+                                        subtitle: proxyUsername.isEmpty ? "请输入用户名" : proxyUsername,
+                                        icon: "person"
+                                    ) {
+                                        TextField("用户名", text: $proxyUsername)
+                                            .textFieldStyle(.roundedBorder)
+                                            .frame(width: 120)
+                                            .onChange(of: proxyUsername) { _ in
+                                                saveProxySettings()
+                                            }
+                                    }
+                                    
+                                    Divider()
+                                    
+                                    // 密码
+                                    SettingsRow(
+                                        title: "密码",
+                                        subtitle: proxyPassword.isEmpty ? "请输入密码" : "••••••••",
+                                        icon: "lock"
+                                    ) {
+                                        SecureField("密码", text: $proxyPassword)
+                                            .textFieldStyle(.roundedBorder)
+                                            .frame(width: 120)
+                                            .onChange(of: proxyPassword) { _ in
+                                                saveProxySettings()
+                                            }
+                                    }
+                                }
+                                
+                                Divider()
+                                
+                                // 测试连接
+                                SettingsRow(
+                                    title: "测试连接",
+                                    subtitle: proxyTestResult.isEmpty ? "点击测试代理连接" : proxyTestResult,
+                                    icon: "checkmark.circle"
+                                ) {
+                                    Button(isTestingProxy ? "测试中..." : "测试") {
+                                        testProxyConnection()
+                                    }
+                                    .buttonStyle(.bordered)
+                                    .disabled(isTestingProxy || proxyHost.isEmpty)
+                                }
                             }
                         }
                     }
@@ -210,6 +355,7 @@ struct SettingsView: View {
         }
         .onAppear {
             updateStats()
+            loadProxySettings()
             
             // 监听主题变更通知
             NotificationCenter.default.addObserver(
@@ -320,6 +466,46 @@ struct SettingsView: View {
                 return "\(minutes)分钟"
             } else {
                 return "\(minutes)分\(remainingSeconds)秒"
+            }
+        }
+    }
+    
+    // 加载代理设置
+    private func loadProxySettings() {
+        proxyEnabled = config.proxyEnabled
+        proxyType = config.proxyType
+        proxyHost = config.proxyHost
+        proxyPort = config.proxyPort
+        proxyUsername = config.proxyUsername
+        proxyPassword = config.proxyPassword
+        proxyAuthRequired = config.proxyAuthRequired
+    }
+    
+    // 保存代理设置
+    private func saveProxySettings() {
+        config.updateProxySettings(
+            enabled: proxyEnabled,
+            type: proxyType,
+            host: proxyHost,
+            port: proxyPort,
+            username: proxyUsername,
+            password: proxyPassword,
+            authRequired: proxyAuthRequired
+        )
+    }
+    
+    // 测试代理连接
+    private func testProxyConnection() {
+        isTestingProxy = true
+        proxyTestResult = "正在测试..."
+        
+        ProxyManager.shared.testProxyConnection { success, message in
+            isTestingProxy = false
+            proxyTestResult = message
+            
+            // 3秒后清除测试结果
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                proxyTestResult = ""
             }
         }
     }
