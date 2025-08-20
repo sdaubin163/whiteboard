@@ -142,6 +142,11 @@ struct PersistentWebView: NSViewRepresentable {
         configuration.allowsAirPlayForMediaPlayback = false
         
         let webView = CustomWKWebView(frame: .zero, configuration: configuration)
+        
+        // 设置自定义 User Agent，让 WebView 伪装成标准的 macOS Safari 浏览器
+        // 这会告诉网页服务器（如Google）下发功能最完整的桌面版JavaScript代码
+        webView.customUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        
         webView.navigationDelegate = context.coordinator
         webView.allowsBackForwardNavigationGestures = true
         
