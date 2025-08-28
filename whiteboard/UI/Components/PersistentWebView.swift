@@ -140,12 +140,76 @@ struct PersistentWebView: NSViewRepresentable {
         // 优化 WebView 设置，减少不必要的弹窗
         configuration.preferences.javaScriptCanOpenWindowsAutomatically = false
         configuration.allowsAirPlayForMediaPlayback = false
+
+        // 注入组合输入（IME）兼容脚本：在输入法组合期间拦截 Enter，防止页面提前处理
+        let contentController = WKUserContentController()
+        let imeScript = """
+        (function(){
+          var composing = false;
+          var suppressUntil = 0; // timestamp until which we suppress submit/enter
+          function now(){ return Date.now(); }
+          function isSuppressed(){ return now() < suppressUntil; }
+          function armSuppression(){ suppressUntil = now() + 1000; }
+          function isEnterKey(e){ return e.key === 'Enter' || e.keyCode === 13; }
+          function isEnterLike(e){ return isEnterKey(e) || e.key === 'Process' || e.keyCode === 229; }
+          function isSubmitButton(el){ try { return el && ((el.tagName === 'BUTTON' && (el.type || '').toLowerCase() === 'submit') || (el.tagName === 'INPUT' && (el.type || '').toLowerCase() === 'submit')); } catch(_){ return false; } }
+          function attach(root){
+            root.addEventListener('compositionstart', function(){ composing = true; }, true);
+            root.addEventListener('compositionupdate', function(){}, true);
+            root.addEventListener('compositionend', function(){ composing = false; }, true);
+
+            function guardKey(e){
+              if ((e.isComposing || composing) && isEnterLike(e)) {
+                if (e.type === 'keydown') { armSuppression(); }
+                e.stopPropagation(); e.preventDefault(); return;
+              }
+              if (isEnterKey(e) && isSuppressed()) {
+                e.stopPropagation(); e.preventDefault(); return;
+              }
+            }
+            ['keydown','keypress','keyup'].forEach(function(t){ root.addEventListener(t, guardKey, true); });
+
+            root.addEventListener('beforeinput', function(e){
+              var isPara = (e.inputType === 'insertParagraph' || e.inputType === 'insertLineBreak');
+              if (((e.isComposing || composing) && isPara) || (isSuppressed() && isPara)) {
+                try { e.preventDefault(); } catch (_) {}
+              }
+            }, true);
+
+            root.addEventListener('submit', function(e){ if (isSuppressed()) { e.stopPropagation(); e.preventDefault(); } }, true);
+            root.addEventListener('click', function(e){ var t = e.target; if (isSuppressed() && isSubmitButton(t)) { e.stopPropagation(); e.preventDefault(); } }, true);
+          }
+
+          // Hook form.submit()
+          try {
+            var origSubmit = HTMLFormElement.prototype.submit;
+            HTMLFormElement.prototype.submit = function(){ if (isSuppressed()) { return; } return origSubmit.apply(this, arguments); };
+          } catch (_){ }
+
+          // Attach to document and future shadow roots
+          attach(document);
+          var origAttachShadow = Element.prototype.attachShadow;
+          if (origAttachShadow) {
+            Element.prototype.attachShadow = function(init){
+              var root = origAttachShadow.call(this, init);
+              try { attach(root); } catch (_) {}
+              return root;
+            };
+          }
+        })();
+        """
+        let userScript = WKUserScript(
+            source: imeScript,
+            injectionTime: .atDocumentStart,
+            forMainFrameOnly: false
+        )
+        contentController.addUserScript(userScript)
+        configuration.userContentController = contentController
         
         let webView = CustomWKWebView(frame: .zero, configuration: configuration)
         
-        // 设置自定义 User Agent，让 WebView 伪装成标准的 macOS Safari 浏览器
-        // 这会告诉网页服务器（如Google）下发功能最完整的桌面版JavaScript代码
-        webView.customUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        // Custom User Agent disabled; rely on default UA for compatibility
+        // webView.customUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
         
         webView.navigationDelegate = context.coordinator
         webView.allowsBackForwardNavigationGestures = true
@@ -245,5 +309,6 @@ struct PersistentWebView: NSViewRepresentable {
             print("🔗 请求导航到: \(navigationAction.request.url?.absoluteString ?? "未知")")
             decisionHandler(.allow)
         }
+
     }
 }
