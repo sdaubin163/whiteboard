@@ -4,6 +4,7 @@ import SwiftUI
 
 class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, ObservableObject {
     var appStateManager: AppStateManager?
+    private var hasPositionedMainWindow = false
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         print("应用启动中...")
@@ -41,8 +42,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, Observable
             if let window = NSApp.windows.first {
                 print("找到窗口，正在显示并激活...")
                 
-                // 确保窗口可见并居中
-                window.center()
+                // 首次展示时居中，之后保持用户自定义位置
+                if !self.hasPositionedMainWindow {
+                    window.center()
+                    self.hasPositionedMainWindow = true
+                }
                 window.makeKeyAndOrderFront(nil)
                 
                 // 将窗口移到所有应用程序的前面

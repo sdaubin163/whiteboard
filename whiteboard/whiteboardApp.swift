@@ -50,7 +50,7 @@ struct whiteboardApp: App {
             if let window = NSApp.windows.first {
                 print("配置窗口...")
                 window.title = "智能工作台"
-                window.center()
+//                window.center()
                 
                 // 设置最小尺寸
                 window.minSize = NSSize(width: 800, height: 600)

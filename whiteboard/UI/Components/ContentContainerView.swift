@@ -22,7 +22,7 @@ struct ContentContainerView: View {
     @State private var containerViewCache: [UUID: CachedContainer] = [:]
     @State private var cleanupTimer: Timer?
     private let maxCacheSize = 5 // 最多缓存5个容器
-    private let maxCacheAge: TimeInterval = 18 * 60 * 60 // 18小时
+    private let maxCacheAge: TimeInterval = 18 * 60 * 60 // 18小时；在此窗口内重新激活会重置计时
     // 调试模式：设置为更短的时间便于测试（10分钟）
     private let debugMode = false
     private var effectiveCacheAge: TimeInterval {
@@ -113,8 +113,8 @@ struct ContentContainerView: View {
         var removedCount = 0
         
         containerViewCache = containerViewCache.filter { _, cachedContainer in
-            let age = now.timeIntervalSince(cachedContainer.createdAt)
-            if age > effectiveCacheAge {
+            let idleDuration = now.timeIntervalSince(cachedContainer.lastAccessedAt)
+            if idleDuration > effectiveCacheAge {
                 removedCount += 1
                 return false // 移除过期容器
             }
@@ -122,7 +122,8 @@ struct ContentContainerView: View {
         }
         
         if removedCount > 0 {
-            print("🧹 清理了 \(removedCount) 个过期容器（超过18小时）")
+            let expireTimeDescription = debugMode ? "10分钟未激活" : "18小时未激活"
+            print("🧹 清理了 \(removedCount) 个过期容器（超过\(expireTimeDescription)）")
         }
     }
     
@@ -159,7 +160,7 @@ struct ContentContainerView: View {
     func getCacheStatistics() -> (total: Int, expired: Int) {
         let now = Date()
         let expiredCount = containerViewCache.values.filter { cachedContainer in
-            now.timeIntervalSince(cachedContainer.createdAt) > effectiveCacheAge
+            now.timeIntervalSince(cachedContainer.lastAccessedAt) > effectiveCacheAge
         }.count
         
         return (total: containerViewCache.count, expired: expiredCount)
